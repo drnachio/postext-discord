@@ -1,0 +1,13 @@
+{
+  "name": "postext-discord",
+  "private": true,
+  "type": "module",
+  "description": "Infrastructure-as-code for the Postext Discord server",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "validate": "node setup.mjs --validate",
+    "plan": "node setup.mjs --dry-run",
+    "setup": "node setup.mjs",
+    "youtube": "node youtube.mjs"
+  }
+}
