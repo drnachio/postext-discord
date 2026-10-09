@@ -24,29 +24,34 @@ const decode = (s) => s
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-// Every video is published in English and Spanish; tell them apart by the title.
-function language(title) {
-  if (/[ñáéíóú¿¡]/i.test(title)) return 'es';
-  const words = title.toLowerCase().split(/[^a-záéíóúñ]+/);
-  const es = words.filter((w) => ['el', 'la', 'los', 'las', 'un', 'una', 'tu', 'con', 'para', 'del', 'y', 'en', 'como'].includes(w)).length;
-  const en = words.filter((w) => ['the', 'a', 'an', 'your', 'with', 'for', 'to', 'of', 'and', 'in', 'how'].includes(w)).length;
-  return es > en ? 'es' : 'en';
-}
-
-const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${yt.channelId}`);
+const res = await fetch(yt.playlistId
+  ? `https://www.youtube.com/feeds/videos.xml?playlist_id=${yt.playlistId}`
+  : `https://www.youtube.com/feeds/videos.xml?channel_id=${yt.channelId}`);
 if (!res.ok) throw new Error(`YouTube feed → ${res.status}`);
 const xml = await res.text();
 const videos = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(([, e]) => ({
   id: e.match(/<yt:videoId>([^<]+)/)[1],
   title: decode(e.match(/<title>([^<]+)/)[1]),
   published: new Date(e.match(/<published>([^<]+)/)[1]),
-}))
-  .filter((v) => !yt.language || language(v.title) === yt.language)
-  .sort((a, b) => a.published - b.published);
+})).sort((a, b) => a.published - b.published);
 
-const recent = await api('GET', `/channels/${channelId}/messages?limit=100`);
-const posted = new Set(recent.flatMap((m) =>
-  [...m.content.matchAll(/(?:youtu\.be\/|watch\?v=|shorts\/)([\w-]{11})/g)].map((x) => x[1])));
+// What's already in #videos: video IDs, and which message carries each title.
+const me = await api('GET', '/users/@me');
+const posted = new Set();
+const byTitle = new Map();
+let before = null;
+for (;;) {
+  const page = await api('GET', `/channels/${channelId}/messages?limit=100${before ? `&before=${before}` : ''}`);
+  for (const m of page) {
+    if (m.author.id !== me.id) continue;
+    const ids = [...m.content.matchAll(/(?:youtu\.be\/|watch\?v=|shorts\/)([\w-]{11})/g)].map((x) => x[1]);
+    ids.forEach((id) => posted.add(id));
+    const title = m.content.match(/🎬 \*\*(.+?)\*\*/)?.[1];
+    if (title && !byTitle.has(title)) byTitle.set(title, m);
+  }
+  if (page.length < 100) break;
+  before = page.at(-1).id;
+}
 
 const fresh = videos.filter((v) => !posted.has(v.id));
 if (!fresh.length) {
@@ -55,6 +60,18 @@ if (!fresh.length) {
 }
 
 for (const v of fresh) {
+  // A re-upload (same title, new ID): point the existing post at the new video.
+  const old = byTitle.get(v.title);
+  if (old) {
+    console.log(`${DRY ? '[dry-run] ' : ''}update ${v.id} "${v.title}" (re-upload)`);
+    if (!DRY) {
+      await api('PATCH', `/channels/${channelId}/messages/${old.id}`, {
+        content: old.content.replace(/https:\/\/youtu\.be\/[\w-]{11}/, `https://youtu.be/${v.id}`),
+        allowed_mentions: { parse: [] },
+      });
+    }
+    continue;
+  }
   const ageHours = (Date.now() - v.published) / 36e5;
   const ping = pingRoleId && ageHours < yt.pingIfNewerThanHours;
   const content = `${ping ? `<@&${pingRoleId}> ` : ''}🎬 **${v.title}**\nhttps://youtu.be/${v.id}`;

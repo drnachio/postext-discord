@@ -30,7 +30,7 @@ npm run youtube                         # post new YouTube videos to #videos
 
 ## YouTube → #videos
 
-`youtube.mjs` reads the channel's RSS feed and posts every video that isn't in #videos yet. It only posts the English versions (`youtube.language` in the config). Videos newer than 24h ping **@Video Pings**, and older ones (backfill) are posted without a ping. Posts are cross-posted to servers that follow #videos.
+`youtube.mjs` reads the channel's RSS feed and posts every video that isn't in #videos yet. It follows the English playlist ("Postext — in English", `youtube.playlistId` in the config), so only English videos are posted. A re-uploaded video (same title, new ID) updates the existing post instead of posting it twice. Videos newer than 24h ping **@Video Pings**, and older ones (backfill) are posted without a ping. Posts are cross-posted to servers that follow #videos.
 
 ## Releases → #releases
 

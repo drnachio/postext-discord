@@ -13,9 +13,10 @@ export const links = {
 
 export const youtube = {
   channelId: 'UCcHi3aoyQODhHdueLJv9G5Q',
-  // The channel publishes every video in English and Spanish. 'en' posts only the
-  // English versions, 'es' only the Spanish ones, null posts everything.
-  language: 'en',
+  // The channel publishes every video in several languages, each with its own
+  // playlist. Only the "Postext — in English" playlist is posted to #videos.
+  // Set to null to post every upload of the channel.
+  playlistId: 'PLXV_YSL9ROv0',
   // Videos older than this are posted without pinging @Video Pings (avoids a ping storm on backfill).
   pingIfNewerThanHours: 24,
 };
