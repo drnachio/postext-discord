@@ -13,10 +13,22 @@ export const links = {
 
 export const youtube = {
   channelId: 'UCcHi3aoyQODhHdueLJv9G5Q',
-  // The channel publishes every video in several languages, each with its own
-  // playlist. Only the "Postext — in English" playlist is posted to #videos.
-  // Set to null to post every upload of the channel.
-  playlistId: 'PLXV_YSL9ROv0',
+  // Every video is published in several languages, one playlist per language.
+  // All of them are announced in #videos, always in English: a translation is
+  // posted with the title of its English original (from the "English version →"
+  // link in its description, its (n/m) part number, or content/video-map.json).
+  englishPlaylist: 'PLXV_YSL9ROv0',
+  playlists: [
+    { id: 'PLXV_YSL9ROv0', language: 'English' },
+    { id: 'PLb9LUQYJSvyg', language: 'Spanish' },
+    { id: 'PLQnmecBIhr0w', language: 'Portuguese' },
+    { id: 'PLbA04WsEy-wQ', language: 'Catalan' },
+    { id: 'PLMVee1AjFr18', language: 'Japanese' },
+    { id: 'PLIfpGQLFoR8k', language: 'Chinese' },
+    { id: 'PLft7wmxPkdGo', language: 'Arabic' },
+  ],
+  // Only English videos ping @Video Pings (one ping per video, not one per language).
+  pingLanguages: ['English'],
   // Videos older than this are posted without pinging @Video Pings (avoids a ping storm on backfill).
   pingIfNewerThanHours: 24,
 };
