@@ -30,6 +30,6 @@ The craft behind the page lives in {#typography}.
 **3.** Introduce yourself in {#introductions}.
 **4.** Try Postext in the browser, no install needed: <{link:sandbox}>
 
-Stay up to date in {#announcements}, and catch new tutorials in {#videos}.
+Stay up to date in {#announcements}, follow every new version in {#releases}, and catch new tutorials in {#videos}.
 
 *Thoughtful design over speed · Clarity over cleverness · Collaboration over territory*

@@ -20,6 +20,16 @@ export const youtube = {
   pingIfNewerThanHours: 24,
 };
 
+// Release notes in #releases, one post per published version of Postext.
+// A version is a vX.Y.Z tag: Postext's release workflow only pushes it after
+// build, tests and the npm publish succeed, so a failed release never gets a note.
+export const releases = {
+  repo: 'drnachio/postext',
+  pingIfNewerThanHours: 24,
+  // Long versions are split across messages; past this, the rest is linked.
+  maxMessagesPerVersion: 4,
+};
+
 export const guild = {
   description:
     'Home of Postext, the open-source programmable typesetter for the web. ' +
@@ -91,6 +101,8 @@ export const categories = [
         topic: 'Community guidelines. By participating you agree to them.' },
       { key: 'announcements', type: 'announcement', overwrites: readOnly,
         topic: 'Releases and project news. Follow this channel to get updates in your own server.' },
+      { key: 'releases', type: 'announcement', overwrites: readOnly,
+        topic: 'Every published version of Postext with its release notes. Press Follow to get them in your own server.' },
       { key: 'videos', type: 'announcement', overwrites: readOnly,
         topic: `New videos from ${links.youtube} — tutorials, demos and deep dives. Posted automatically.` },
       { key: 'resources', type: 'text', overwrites: readOnly,
@@ -277,7 +289,7 @@ export const onboarding = {
       title: 'Which notifications would you like?',
       single_select: false, required: false, in_onboarding: true,
       options: [
-        { title: 'New releases', emoji: '🚀', description: 'Get pinged when a new version ships', roles: ['releasePings'], channels: [] },
+        { title: 'New releases', emoji: '🚀', description: 'Get pinged when a new version ships', roles: ['releasePings'], channels: ['releases'] },
         { title: 'New videos', emoji: '🎬', description: 'Get pinged when a new YouTube video is out', roles: ['videoPings'], channels: [] },
         { title: 'Events & office hours', emoji: '📅', description: 'Get pinged for live sessions', roles: ['eventPings'], channels: [] },
       ],

@@ -1,0 +1,29 @@
+name: Feeds → Discord
+
+# New YouTube videos → #videos, new Postext versions → #releases.
+on:
+  schedule:
+    - cron: '7 * * * *' # hourly (private repos bill Actions minutes)
+  workflow_dispatch:
+
+jobs:
+  feeds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      GUILD_ID: ${{ secrets.GUILD_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Each feed runs even if the other one fails.
+      - name: YouTube → #videos
+        continue-on-error: true
+        run: node youtube.mjs
+      - name: Releases → #releases
+        run: node releases.mjs
+        env:
+          # Read-only access to the public drnachio/postext repo (higher rate limit)
+          GITHUB_TOKEN: ${{ github.token }}

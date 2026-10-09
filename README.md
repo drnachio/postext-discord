@@ -32,7 +32,15 @@ npm run youtube                         # post new YouTube videos to #videos
 
 `youtube.mjs` reads the channel's RSS feed and posts every video that isn't in #videos yet. It only posts the English versions (`youtube.language` in the config). Videos newer than 24h ping **@Video Pings**, and older ones (backfill) are posted without a ping. Posts are cross-posted to servers that follow #videos.
 
-To run it automatically, push this folder to a GitHub repo and add the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. [`.github/workflows/youtube.yml`](.github/workflows/youtube.yml) then checks every hour.
+## Releases → #releases
+
+`releases.mjs` posts the release notes of every published Postext version (`vX.Y.Z` tags in drnachio/postext) to #releases. Postext's release workflow only pushes a tag after build, tests and the npm publish succeed, so a failed release never gets a note. The notes are built from the commits between a tag and the previous one, grouped by type (`feat` → New features, `fix` → Bug fixes, `perf`, `docs`, `skill`, …); tests, CI and chores are only counted. Long versions are split across up to 4 messages. Versions newer than 24h ping **@Release Pings** and are cross-posted to servers following #releases.
+
+To replace the generated notes of a version with hand-written ones, add `content/releases/vX.Y.Z.md` (see `v0.3.16.md`, the first version). `--backfill` posts the whole history on an empty channel (no pings); `--preview <dir>` renders every version to files without touching Discord.
+
+## Automation
+
+[`.github/workflows/feeds.yml`](.github/workflows/feeds.yml) runs both feeds every hour with the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. Run it by hand from the Actions tab (**Feeds → Discord → Run workflow**) to post right away.
 
 ## GitHub → #github-feed
 
