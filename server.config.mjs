@@ -273,7 +273,7 @@ export const messages = [
 // Server onboarding (Community servers). Needs ≥7 default channels, ≥5 of them writable.
 export const onboarding = {
   defaultChannels: [
-    'welcome', 'rules', 'announcements', 'videos', 'resources',
+    'welcome', 'rules', 'announcements', 'releases', 'videos', 'resources',
     'general', 'introductions', 'typography', 'showcase', 'help', 'feature-requests',
   ],
   prompts: [
