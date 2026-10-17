@@ -38,9 +38,13 @@ npm run youtube                         # post new YouTube videos to #videos
 
 To replace the generated notes of a version with hand-written ones, add `content/releases/vX.Y.Z.md` (see `v0.3.16.md`, the first version). `--backfill` posts the whole history on an empty channel (no pings); `--preview <dir>` renders every version to files without touching Discord.
 
+## Closed issues → #github-feed
+
+`issues.mjs` posts a summary of every issue closed in drnachio/postext: what was asked (the issue's first paragraph), how it was solved or why it was closed (the closing comment), the outcome, the release it ships in (from the merged `Release x.y.z` pull request that references it, else "the next release"), labels, linked pull requests and how long it was open. Pull requests are left out. It resumes from the latest summary in the channel; `issues.since` in the config sets where the very first run starts. `--preview <n>` prints the summary of issue `n` without posting.
+
 ## Automation
 
-[`.github/workflows/feeds.yml`](.github/workflows/feeds.yml) runs both feeds every hour with the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. Run it by hand from the Actions tab (**Feeds → Discord → Run workflow**) to post right away.
+[`.github/workflows/feeds.yml`](.github/workflows/feeds.yml) runs the three feeds (videos, releases, closed issues) every hour with the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. Run it by hand from the Actions tab (**Feeds → Discord → Run workflow**) to post right away.
 
 ## GitHub → #github-feed
 

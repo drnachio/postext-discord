@@ -1,6 +1,7 @@
 name: Feeds → Discord
 
-# New YouTube videos → #videos, new Postext versions → #releases.
+# New YouTube videos → #videos, new Postext versions → #releases,
+# closed Postext issues → #github-feed.
 on:
   schedule:
     - cron: '7 * * * *' # hourly (private repos bill Actions minutes)
@@ -23,7 +24,12 @@ jobs:
         continue-on-error: true
         run: node youtube.mjs
       - name: Releases → #releases
+        continue-on-error: true
         run: node releases.mjs
         env:
           # Read-only access to the public drnachio/postext repo (higher rate limit)
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Closed issues → #github-feed
+        run: node issues.mjs
+        env:
           GITHUB_TOKEN: ${{ github.token }}

@@ -9,6 +9,7 @@
     "plan": "node setup.mjs --dry-run",
     "setup": "node setup.mjs",
     "youtube": "node youtube.mjs",
-    "releases": "node releases.mjs"
+    "releases": "node releases.mjs",
+    "issues": "node issues.mjs"
   }
 }

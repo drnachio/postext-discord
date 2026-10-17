@@ -33,6 +33,14 @@ export const youtube = {
   pingIfNewerThanHours: 24,
 };
 
+// A summary in #github-feed of every issue closed in drnachio/postext, from `since` on.
+export const issues = {
+  repo: 'drnachio/postext',
+  since: '2026-10-17T00:00:00Z',
+  // Length of "The issue" and "The fix" excerpts.
+  maxChars: 500,
+};
+
 // Release notes in #releases, one post per published version of Postext.
 // A version is a vX.Y.Z tag: Postext's release workflow only pushes it after
 // build, tests and the npm publish succeed, so a failed release never gets a note.
