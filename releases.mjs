@@ -12,7 +12,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { releases as cfg } from './server.config.mjs';
-import { createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
+import { alreadyPosted, createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
 import { github as githubApi, versionTags as repoVersionTags } from './lib/github.mjs';
 
 const argv = process.argv.slice(2);
@@ -215,6 +215,7 @@ for (const r of pending) {
   const ping = !BACKFILL && fresh && pingRoleId;
   console.log(`${DRY ? '[dry-run] ' : ''}post ${r.tag} (${embeds.length} message${embeds.length === 1 ? '' : 's'})${ping ? ' (ping)' : ''}`);
   if (DRY) continue;
+  if (await alreadyPosted(api, channelId, me.id, embeds[0].title)) { console.log('  already posted by another run'); continue; }
   for (const [i, embed] of embeds.entries()) {
     const msg = await api('POST', `/channels/${channelId}/messages`, {
       content: i === 0 && ping ? `<@&${pingRoleId}>` : undefined,

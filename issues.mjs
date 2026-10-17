@@ -10,7 +10,7 @@
 // most recent summary's closing time, or `issues.since` in the config on the first run.
 
 import { issues as cfg } from './server.config.mjs';
-import { createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
+import { alreadyPosted, createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
 import { github as githubApi } from './lib/github.mjs';
 
 const argv = process.argv.slice(2);
@@ -165,8 +165,10 @@ if (!pending.length) {
 for (const issue of pending) {
   console.log(`${DRY ? '[dry-run] ' : ''}post #${issue.number} ${issue.title}`);
   if (DRY) continue;
+  const embed = await summarize(issue);
+  if (await alreadyPosted(api, channelId, me.id, embed.title)) { console.log('  already posted by another run'); continue; }
   await api('POST', `/channels/${channelId}/messages`, {
-    embeds: [await summarize(issue)],
+    embeds: [embed],
     allowed_mentions: { parse: [] },
   });
 }

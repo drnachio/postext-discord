@@ -12,7 +12,7 @@
 // `docs.since` in the config on the first run.
 
 import { docs as cfg } from './server.config.mjs';
-import { createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
+import { alreadyPosted, createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
 import { compareVersions, github, versionTags } from './lib/github.mjs';
 
 const argv = process.argv.slice(2);
@@ -218,6 +218,8 @@ for (const tag of pending) {
   if (!embed) continue;
   posted++;
   console.log(`${DRY ? '[dry-run] ' : ''}post ${embed.title}`);
-  if (!DRY) await api('POST', `/channels/${channelId}/messages`, { embeds: [embed], allowed_mentions: { parse: [] } });
+  if (DRY) continue;
+  if (await alreadyPosted(api, channelId, me.id, embed.title)) { console.log('  already posted by another run'); continue; }
+  await api('POST', `/channels/${channelId}/messages`, { embeds: [embed], allowed_mentions: { parse: [] } });
 }
 if (!posted) console.log(`No docs or translation changes to announce (${pending.length} version(s) checked after ${last}).`);
