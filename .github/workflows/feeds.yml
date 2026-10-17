@@ -6,7 +6,14 @@ name: Feeds → Discord
 on:
   schedule:
     - cron: '7 * * * *' # hourly (private repos bill Actions minutes)
+  # Also dispatched by drnachio/postext right after a release and when an issue closes.
   workflow_dispatch:
+
+# One run at a time: a run that arrives while another is going waits for it,
+# so two triggers at once never post the same thing twice.
+concurrency:
+  group: feeds
+  cancel-in-progress: false
 
 jobs:
   feeds:
