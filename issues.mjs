@@ -11,6 +11,7 @@
 
 import { issues as cfg } from './server.config.mjs';
 import { createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
+import { github as githubApi } from './lib/github.mjs';
 
 const argv = process.argv.slice(2);
 const DRY = argv.includes('--dry-run');
@@ -19,13 +20,7 @@ const PREVIEW = argv.includes('--preview') ? Number(argv[argv.indexOf('--preview
 const COLORS = { completed: 0x2fbf71, not_planned: 0x8b8f98, duplicate: 0x8b8f98 };
 const OUTCOME = { completed: '✅ Completed', not_planned: '🚫 Not planned', duplicate: '♊ Duplicate' };
 
-async function github(path) {
-  const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'postext-discord' };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const res = await fetch(`https://api.github.com/repos/${cfg.repo}${path}`, { headers });
-  if (!res.ok) throw new Error(`GitHub ${path} → ${res.status} ${await res.text()}`);
-  return res.json();
-}
+const github = (path) => githubApi(cfg.repo, path);
 
 // ---------- summary ----------
 

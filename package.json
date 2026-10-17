@@ -10,6 +10,7 @@
     "setup": "node setup.mjs",
     "youtube": "node youtube.mjs",
     "releases": "node releases.mjs",
-    "issues": "node issues.mjs"
+    "issues": "node issues.mjs",
+    "docs": "node docs.mjs"
   }
 }

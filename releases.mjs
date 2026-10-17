@@ -13,6 +13,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { releases as cfg } from './server.config.mjs';
 import { createClient, loadEnv, readJson, STATE_FILE } from './lib/discord.mjs';
+import { github as githubApi, versionTags as repoVersionTags } from './lib/github.mjs';
 
 const argv = process.argv.slice(2);
 const DRY = argv.includes('--dry-run');
@@ -21,31 +22,10 @@ const PREVIEW = argv.includes('--preview') ? argv[argv.indexOf('--preview') + 1]
 
 const COLOR = 0xf2c230;
 const DESC_LIMIT = 4000; // embed descriptions max out at 4096
-const TAG_RE = /^v(\d+)\.(\d+)\.(\d+)$/;
-
 // ---------- GitHub ----------
 
-async function github(path) {
-  const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'postext-discord' };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const res = await fetch(`https://api.github.com/repos/${cfg.repo}${path}`, { headers });
-  if (!res.ok) throw new Error(`GitHub ${path} → ${res.status} ${await res.text()}`);
-  return res.json();
-}
-
-async function versionTags() {
-  const tags = [];
-  for (let page = 1; ; page++) {
-    const batch = await github(`/tags?per_page=100&page=${page}`);
-    tags.push(...batch.map((t) => t.name).filter((n) => TAG_RE.test(n)));
-    if (batch.length < 100) break;
-  }
-  const key = (t) => t.match(TAG_RE).slice(1).map(Number);
-  return tags.sort((a, b) => {
-    const [x, y] = [key(a), key(b)];
-    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
-  });
-}
+const github = (path) => githubApi(cfg.repo, path);
+const versionTags = () => repoVersionTags(cfg.repo);
 
 async function commitsFor(tag, prev) {
   if (prev) return (await github(`/compare/${prev}...${tag}`)).commits;

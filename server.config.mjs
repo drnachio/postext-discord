@@ -41,6 +41,14 @@ export const issues = {
   maxChars: 500,
 };
 
+// Notices in #docs-and-translations for versions that improve the docs or the
+// translations (new language, new or updated pages, translated recipes), from `since` on.
+export const docs = {
+  repo: 'drnachio/postext',
+  since: 'v1.36.0',
+  maxVersionsPerRun: 10,
+};
+
 // Release notes in #releases, one post per published version of Postext.
 // A version is a vX.Y.Z tag: Postext's release workflow only pushes it after
 // build, tests and the npm publish succeed, so a failed release never gets a note.

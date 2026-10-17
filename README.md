@@ -42,9 +42,13 @@ To replace the generated notes of a version with hand-written ones, add `content
 
 `issues.mjs` posts a summary of every issue closed in drnachio/postext: what was asked (the issue's first paragraph), how it was solved or why it was closed (the closing comment), the outcome, the release it ships in (from the merged `Release x.y.z` pull request that references it, else "the next release"), labels, linked pull requests and how long it was open. Pull requests are left out. It resumes from the latest summary in the channel; `issues.since` in the config sets where the very first run starts. `--preview <n>` prints the summary of issue `n` without posting.
 
+## Docs & translations → #docs-and-translations
+
+`docs.mjs` announces the versions that improve the documentation or the translations. Each version is compared with the previous tag through the two file trees (no 300-file limit): a new site language (`apps/web/messages/<lang>.json`), new doc pages (`docs/<topic>-en.mdx`, with their title and plain summary), updated pages and in how many languages (edits to `lastUpdated` / `readingTime` alone don't count), docs pages and cookbook recipes translated, and the `docs:` commits as "What changed" (internal DESIGN notes left out). Versions that touch none of these post nothing. It resumes from the latest version announced in the channel; `docs.since` in the config sets the first run. `--preview <tag>` prints the notice of a version without posting.
+
 ## Automation
 
-[`.github/workflows/feeds.yml`](.github/workflows/feeds.yml) runs the three feeds (videos, releases, closed issues) every hour with the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. Run it by hand from the Actions tab (**Feeds → Discord → Run workflow**) to post right away.
+[`.github/workflows/feeds.yml`](.github/workflows/feeds.yml) runs the four feeds (videos, releases, closed issues, docs & translations) every hour with the repo secrets `DISCORD_TOKEN` and `GUILD_ID`. Run it by hand from the Actions tab (**Feeds → Discord → Run workflow**) to post right away.
 
 ## GitHub → #github-feed
 
