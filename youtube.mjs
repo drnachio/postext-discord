@@ -5,10 +5,12 @@
 //   node youtube.mjs --rebuild    delete the video posts in #videos and post every video again,
 //                                 oldest first (no pings, no cross-posting)
 //
-// Each language has its own playlist. A translation is announced with the title of
-// its English original: from the "English version →" link in its description, its
-// (n/m) part number, or content/video-map.json. Stateless: what's already posted is
-// read back from #videos.
+// Each language has its own playlist (`youtube.playlists` in the config). The videos are
+// read from each playlist's page, which lists all of them; YouTube's feeds stop at 15
+// per playlist. A translation is announced with the title of its English original: from
+// the "🇬🇧 English → …" (or "English version → …") link in its description, its (n/m)
+// part number, or content/video-map.json. Stateless: what's already posted is read back
+// from #videos.
 
 import { readFileSync } from 'node:fs';
 import { youtube as yt } from './server.config.mjs';
@@ -26,48 +28,119 @@ if (!channelId) {
   process.exit(1);
 }
 const videoMap = JSON.parse(readFileSync(new URL('./content/video-map.json', import.meta.url), 'utf8'));
+const languageOf = new Map(yt.playlists.map((p) => [p.id, p.language]));
 
+const HEADERS = { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en' };
 const decode = (s) => s
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 // "(2/4)" and "（2/4）" are the same part.
 const partOf = (title) => title.normalize('NFKC').match(/\((\d+)\/(\d+)\)/)?.[0] ?? null;
+// The English original a translation links to, in its description.
+const englishLink = (description) =>
+  description.match(/(?:🇬🇧|English)[^\n]*?youtu\.be\/([\w-]{11})/)?.[1] ?? null;
+// The language playlist a video's description points to ("▶ All Postext videos in … → …list=…").
+const playlistLink = (description) => description.match(/playlist\?list=([\w-]+)/)?.[1] ?? null;
 
-async function playlist(id, language) {
-  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?playlist_id=${id}`);
-  if (!res.ok) throw new Error(`YouTube playlist ${id} → ${res.status}`);
-  const xml = await res.text();
-  return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(([, e]) => ({
+// ---------- YouTube ----------
+
+function initialData(html, name) {
+  const m = html.match(new RegExp(`(?:var |window\\["?)${name}"?\\]?\\s*=\\s*(\\{.*?\\});(?:var |</script>)`, 's'));
+  return m ? JSON.parse(m[1]) : null;
+}
+
+function walk(node, visit) {
+  if (Array.isArray(node)) for (const x of node) walk(x, visit);
+  else if (node && typeof node === 'object') { visit(node); for (const x of Object.values(node)) walk(x, visit); }
+}
+
+// Every video of a playlist, from its page: [{ id, title }] in playlist order.
+async function playlistPage(id) {
+  const res = await fetch(`https://www.youtube.com/playlist?list=${id}`, { headers: HEADERS });
+  if (!res.ok) throw new Error(`playlist page ${id} → ${res.status}`);
+  const data = initialData(await res.text(), 'ytInitialData');
+  if (!data) throw new Error(`playlist page ${id}: no data`);
+  const videos = [];
+  walk(data, (o) => {
+    const l = o.lockupViewModel;
+    if (l?.contentId?.length === 11 && /VIDEO/.test(l.contentType ?? 'VIDEO')) {
+      videos.push({ id: l.contentId, title: l.metadata?.lockupMetadataViewModel?.title?.content ?? null });
+    }
+    const r = o.playlistVideoRenderer;
+    if (r?.videoId) videos.push({ id: r.videoId, title: r.title?.runs?.[0]?.text ?? r.title?.simpleText ?? null });
+  });
+  return [...new Map(videos.map((v) => [v.id, v])).values()];
+}
+
+// A feed's entries (at most the 15 newest): [{ id, title, description, published }].
+async function feed(query) {
+  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?${query}`);
+  if (!res.ok) throw new Error(`feed ${query} → ${res.status}`);
+  return [...(await res.text()).matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(([, e]) => ({
     id: e.match(/<yt:videoId>([^<]+)/)[1],
     title: decode(e.match(/<title>([^<]+)/)[1]),
     description: decode(e.match(/<media:description>([\s\S]*?)<\/media:description>/)?.[1] ?? ''),
     published: new Date(e.match(/<published>([^<]+)/)[1]),
-    language,
   }));
 }
 
-const lists = await Promise.all(yt.playlists.map((p) => playlist(p.id, p.language)));
-const english = lists[yt.playlists.findIndex((p) => p.id === yt.englishPlaylist)];
-const englishById = new Map(english.map((v) => [v.id, v]));
-const englishByPart = new Map(english.filter((v) => partOf(v.title)).map((v) => [partOf(v.title), v]));
+// Title, description and date of one video, from its page (for videos no feed shows).
+async function watchPage(id) {
+  const res = await fetch(`https://www.youtube.com/watch?v=${id}`, { headers: HEADERS });
+  const player = res.ok ? initialData(await res.text(), 'ytInitialPlayerResponse') : null;
+  const details = player?.videoDetails;
+  if (!details) return null;
+  const date = player.microformat?.playerMicroformatRenderer?.publishDate;
+  return { title: details.title, description: details.shortDescription ?? '', published: date ? new Date(date) : null };
+}
 
-function englishTitle(v) {
+async function oembedTitle(id) {
+  const res = await fetch(`https://www.youtube.com/oembed?url=https://youtu.be/${id}&format=json`);
+  return res.ok ? (await res.json()).title : null;
+}
+
+// ---------- what's on YouTube ----------
+
+const videos = new Map(); // id → { id, title, description, published, language }
+const merge = (v) => videos.set(v.id, { ...videos.get(v.id), ...Object.fromEntries(Object.entries(v).filter(([, x]) => x != null)) });
+
+for (const p of yt.playlists) {
+  const pageVideos = await playlistPage(p.id).catch((e) => { console.warn(`⚠ ${e.message}; using its feed (15 newest)`); return null; });
+  const feedVideos = await feed(`playlist_id=${p.id}`).catch(() => []);
+  for (const v of pageVideos ?? feedVideos) merge({ id: v.id, title: v.title, language: p.language });
+  for (const v of feedVideos) merge({ ...v, language: p.language });
+}
+// The channel's newest uploads, with their descriptions: catches a video not yet in any playlist.
+for (const v of await feed(`channel_id=${yt.channelId}`).catch(() => [])) {
+  const language = videos.get(v.id)?.language ?? languageOf.get(playlistLink(v.description));
+  if (!language) {
+    const list = playlistLink(v.description);
+    console.warn(`⚠ ${v.id} "${v.title}" is in no configured playlist${list ? ` (its description points to ${list}: add it to youtube.playlists)` : ''}`);
+    continue;
+  }
+  merge({ ...v, language });
+}
+
+const englishTitles = new Map([...videos.values()].filter((v) => v.language === 'English').map((v) => [v.id, v.title]));
+const englishByPart = new Map([...videos.values()]
+  .filter((v) => v.language === 'English' && v.title && partOf(v.title)).map((v) => [partOf(v.title), v.title]));
+
+async function englishTitle(v) {
   if (v.language === 'English') return v.title;
-  const linked = v.description.match(/English version[^\n]*?youtu\.be\/([\w-]{11})/)?.[1];
-  const original = englishById.get(linked) ?? englishById.get(videoMap[v.id]) ?? englishByPart.get(partOf(v.title));
-  return original?.title ?? null;
+  const original = englishLink(v.description ?? '') ?? videoMap[v.id];
+  if (original) return englishTitles.get(original) ?? await oembedTitle(original);
+  return (v.title && englishByPart.get(partOf(v.title))) ?? null;
 }
 
 // The announcement, always in English.
-function line(v) {
-  const title = englishTitle(v);
+async function line(v) {
+  const title = await englishTitle(v);
   if (v.language === 'English') return `🎬 **${title}**`;
   return title ? `🎬 **${title}** · 🌐 ${v.language} version` : `🎬 New video in ${v.language}`;
 }
 
-const videos = lists.flat().sort((a, b) => a.published - b.published);
+// ---------- what's in #videos ----------
 
-// Video posts already in #videos (the bot's messages with a YouTube link).
 const me = await api('GET', '/users/@me');
 const posts = [];
 let before = null;
@@ -91,16 +164,28 @@ for (const m of posts) {
   if (!byLine.has(l)) byLine.set(l, m);
 }
 
-const fresh = videos.filter((v) => !posted.has(v.id));
+// New videos, completed from their page when no feed carried their description.
+const fresh = [];
+for (const v of videos.values()) {
+  if (posted.has(v.id)) continue;
+  if (v.description == null || !v.published) {
+    const page = await watchPage(v.id);
+    if (!page) { console.warn(`⚠ ${v.id}: page unavailable, trying again on the next run`); continue; }
+    merge({ id: v.id, ...page, title: v.title ?? page.title });
+  }
+  fresh.push(videos.get(v.id));
+}
+fresh.sort((a, b) => (a.published ?? 0) - (b.published ?? 0));
+
 if (!fresh.length) {
-  console.log(`No new videos (${videos.length} in ${yt.playlists.length} playlists, all posted).`);
+  console.log(`No new videos (${videos.size} in ${yt.playlists.length} playlists, all posted).`);
   process.exit(0);
 }
 
 for (const v of fresh) {
-  const text = line(v);
+  const text = await line(v);
   // A re-upload (same announcement, new video ID): point the existing post at the new video.
-  const old = text.includes("**") ? byLine.get(text) : null;
+  const old = text.includes('**') ? byLine.get(text) : null;
   if (old) {
     console.log(`${DRY ? '[dry-run] ' : ''}update ${v.id} ${text} (re-upload)`);
     if (!DRY) {
@@ -111,7 +196,7 @@ for (const v of fresh) {
     }
     continue;
   }
-  const recent = (Date.now() - v.published) / 36e5 < yt.pingIfNewerThanHours;
+  const recent = v.published && (Date.now() - v.published) / 36e5 < yt.pingIfNewerThanHours;
   const ping = !REBUILD && pingRoleId && recent && yt.pingLanguages.includes(v.language);
   const content = `${ping ? `<@&${pingRoleId}> ` : ''}${text}\nhttps://youtu.be/${v.id}`;
   console.log(`${DRY ? '[dry-run] ' : ''}post ${v.id} ${text}${ping ? ' (ping)' : ''}`);

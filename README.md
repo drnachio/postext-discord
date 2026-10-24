@@ -30,7 +30,7 @@ npm run youtube                         # post new YouTube videos to #videos
 
 ## YouTube → #videos
 
-`youtube.mjs` reads one playlist per language (`youtube.playlists` in the config) and announces every video in #videos, always in English: a translation is posted with the title of its English original, taken from the "English version →" link in its description, its (n/m) part number, or `content/video-map.json`, plus its language. Only English videos newer than 24h ping **@Video Pings** (one ping per video, not one per language). A re-upload (same announcement, new video ID) updates the existing post instead of posting it twice. `--rebuild` deletes the video posts and posts every video again in order, without pings.
+`youtube.mjs` reads one playlist per language (`youtube.playlists` in the config) from its page, which lists every video (YouTube's feeds stop at 15 per playlist), plus the channel's newest uploads, and announces every video in #videos, always in English: a translation is posted with the title of its English original, taken from the "🇬🇧 English →" (or "English version →") link in its description, its (n/m) part number, or `content/video-map.json`, plus its language. Only English videos newer than 24h ping **@Video Pings** (one ping per video, not one per language). A re-upload (same announcement, new video ID) updates the existing post instead of posting it twice. `--rebuild` deletes the video posts and posts every video again in order, without pings.
 
 ## Releases → #releases
 

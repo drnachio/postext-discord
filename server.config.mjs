@@ -26,6 +26,9 @@ export const youtube = {
     { id: 'PLMVee1AjFr18', language: 'Japanese' },
     { id: 'PLIfpGQLFoR8k', language: 'Chinese' },
     { id: 'PLft7wmxPkdGo', language: 'Arabic' },
+    { id: 'PLL_dspLQRyVM', language: 'German' },
+    { id: 'PLQtapzaWVIRw', language: 'French' },
+    { id: 'PLDohi5agrPmY', language: 'Italian' },
   ],
   // Only English videos ping @Video Pings (one ping per video, not one per language).
   pingLanguages: ['English'],
